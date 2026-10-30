@@ -32,7 +32,7 @@ def _hours(minutes: int) -> str:
 
 
 def build_ics(shifts: list[dict], tz_name: str, with_breaks: bool = False, alarm_min: int = 0,
-              absences: list[dict] | None = None) -> str:
+              absences: list[dict] | None = None, cal_name: str = "Turni di lavoro") -> str:
     tz = ZoneInfo(tz_name)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     lines = [
@@ -41,7 +41,7 @@ def build_ics(shifts: list[dict], tz_name: str, with_breaks: bool = False, alarm
         "PRODID:-//Turni//Amazon Moment//IT",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        "X-WR-CALNAME:Turni di lavoro",
+        f"X-WR-CALNAME:{_esc(cal_name)}",
         f"X-WR-TIMEZONE:{tz_name}",
         "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
         "X-PUBLISHED-TTL:PT1H",
@@ -53,7 +53,7 @@ def build_ics(shifts: list[dict], tz_name: str, with_breaks: bool = False, alarm
             title += " · " + ", ".join(sh["highlights"])
         if sh.get("absence"):
             title = f'{sh["absence"]} (turno {sh["start"][11:16]}–{sh["end"][11:16]})'
-        desc = f'Ore di lavoro: {_hours(sh["minutes_worked"])} (pranzo escluso)\n\n{detail}'
+        desc = f'Ore di lavoro: {_hours(sh["minutes_worked"])} (pausa pranzo esclusa)\n\n{detail}'
         lines += [
             "BEGIN:VEVENT",
             f'UID:turno-{sh["start"].replace(":", "").replace("-", "")}@turni.local',

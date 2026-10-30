@@ -27,6 +27,8 @@
       </button>
     </header>
 
+    <nav class="people-nav" id="peopleNav" aria-label="Persona" hidden></nav>
+
     <section id="banner" hidden></section>
     <section id="hero" class="hero" hidden></section>
 
@@ -48,23 +50,92 @@
   </main>
 
   <dialog id="settings">
-    <form method="dialog" class="sheet">
-      <h2>Calendario e accesso</h2>
-      <p class="muted">Aggiungi questo indirizzo come <b>calendario in abbonamento</b> sul telefono o in Home Assistant: i turni si aggiornano da soli.</p>
-      <label class="field">
-        <span>Indirizzo del calendario</span>
-        <input id="icsUrl" readonly>
-      </label>
-      <div class="row">
-        <button type="button" class="btn" id="copyIcs">Copia indirizzo</button>
-        <a class="btn ghost" id="webcalLink" href="#">Apri in Calendario (iPhone)</a>
+    <div class="sheet scroll">
+      <section class="sect">
+        <h2>Il tuo calendario</h2>
+        <p class="muted">Aggiungi questo indirizzo come <b>calendario in abbonamento</b> sul telefono o in Home Assistant: i turni si aggiornano da soli.</p>
+        <label class="field">
+          <span>Indirizzo del calendario</span>
+          <input id="icsUrl" readonly>
+        </label>
+        <div class="row">
+          <button type="button" class="btn" id="copyIcs">Copia indirizzo</button>
+          <a class="btn ghost" id="webcalLink" href="#">Apri in Calendario (iPhone)</a>
+        </div>
+        <label class="check"><input type="checkbox" id="icsBreaks"> Includi le pause come eventi separati</label>
+        <label class="check"><input type="checkbox" id="icsAlarm"> Promemoria 60 minuti prima del turno</label>
+        <p class="muted small" id="statusLine"></p>
+      </section>
+
+      <section class="sect" id="tplSection" hidden>
+        <h2>I tuoi modelli di turno</h2>
+        <p class="muted small">Un modello si usa con un tocco quando inserisci un turno.</p>
+        <ul class="items" id="tplList"></ul>
+        <form id="tplForm" class="subform">
+          <label class="field"><span>Nome del modello</span><input id="tpName" maxlength="30" placeholder="Es. Mattina" required></label>
+      <div class="grid2">
+        <label class="field"><span>Inizio</span><input type="time" id="tpStart" required></label>
+        <label class="field"><span>Fine</span><input type="time" id="tpEnd" required></label>
       </div>
-      <label class="check"><input type="checkbox" id="icsBreaks"> Includi pause e pranzo come eventi separati</label>
-      <label class="check"><input type="checkbox" id="icsAlarm"> Promemoria 60 minuti prima del turno</label>
-      <p class="muted small" id="statusLine"></p>
+      <div class="grid2">
+        <label class="field"><span>Pausa</span><select id="tpPause"><option value="0">nessuna</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option></select></label>
+        <label class="field"><span>Pausa alle (facoltativo)</span><input type="time" id="tpPauseAt"></label>
+      </div>
+          <p class="error small" id="tpError" hidden></p>
+          <div class="row end">
+            <button type="button" class="btn ghost" id="tpReset">Svuota</button>
+            <button class="btn" id="tpSubmit">Salva modello</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="sect">
+        <h2>Il tuo nome</h2>
+        <div class="row nowrap">
+          <input class="input" id="myName" maxlength="30" aria-label="Il tuo nome">
+          <button type="button" class="btn ghost" id="saveMyName">Salva</button>
+        </div>
+      </section>
+
+      <section class="sect" id="peopleSection" hidden>
+        <h2>Persone</h2>
+        <p class="muted small">Ogni persona ha un suo link personale: mandaglielo e lo apre sul suo telefono. Vede anche i tuoi turni, ma modifica solo i suoi.</p>
+        <ul class="items" id="peopleList"></ul>
+        <form id="peopleForm" class="row nowrap">
+          <input class="input" id="ppName" maxlength="30" placeholder="Nome" aria-label="Nome della nuova persona" required>
+          <button class="btn">Aggiungi</button>
+        </form>
+        <p class="error small" id="ppError" hidden></p>
+      </section>
+
       <div class="row end">
         <button type="button" class="btn ghost danger" id="logout">Esci da questo dispositivo</button>
-        <button class="btn" autofocus>Chiudi</button>
+        <button type="button" class="btn" id="closeSettings" autofocus>Chiudi</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="editor">
+    <form class="sheet scroll" id="editorForm">
+      <h2 id="edTitle">—</h2>
+      <p class="muted small" id="edTplHint">Tocca un modello per usarlo subito, oppure scrivi gli orari qui sotto.</p>
+      <div class="tpl-grid" id="edTemplates"></div>
+      <div class="grid2">
+        <label class="field"><span>Inizio</span><input type="time" id="edStart" required></label>
+        <label class="field"><span>Fine</span><input type="time" id="edEnd" required></label>
+      </div>
+      <div class="grid2">
+        <label class="field"><span>Pausa</span><select id="edPause"><option value="0">nessuna</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option></select></label>
+        <label class="field"><span>Pausa alle (facoltativo)</span><input type="time" id="edPauseAt"></label>
+      </div>
+      <label class="field"><span>Nota (facoltativa)</span><input id="edNote" maxlength="40" placeholder="Es. reparto, sostituzione…"></label>
+      <label class="check"><input type="checkbox" id="edSaveTpl"> Salva questi orari anche come modello</label>
+      <label class="field" id="edTplNameBox" hidden><span>Nome del modello</span><input id="edTplName" maxlength="30" placeholder="Es. Pomeriggio"></label>
+      <p class="error small" id="edError" hidden></p>
+      <div class="row end">
+        <button type="button" class="btn ghost danger" id="edDelete">Elimina turno</button>
+        <button type="button" class="btn ghost" id="edCancel">Annulla</button>
+        <button class="btn">Salva</button>
       </div>
     </form>
   </dialog>

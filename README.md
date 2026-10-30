@@ -149,6 +149,22 @@ C'è anche `GET /api/next?token=…`, che restituisce il prossimo turno in JSON,
 
 ---
 
+## Due persone (turni inseriti a mano)
+
+L'app può essere usata anche da una seconda persona che non ha il portale e inserisce i turni a mano.
+
+**Aggiungerla.** Dal tuo telefono: ingranaggio → *Persone* → scrivi il nome → *Aggiungi*. Poi *Copia link app* e mandale il link: aprendolo sul suo telefono entra con il suo profilo (sul telefono va aggiunta alla schermata Home come per te).
+
+**Cosa vede ognuno.** In alto c'è la scelta della persona: i tuoi turni, i suoi, e *Insieme*, che mette i due turni uno sotto l'altro e segnala i giorni in cui siete **liberi insieme** (con il prossimo in evidenza). Ognuno vede i turni dell'altro, ma modifica solo i propri.
+
+**Inserire i turni.** Tocca un giorno: si apre una scheda con i **modelli** salvati (es. "Mattina 06:00–14:00, pausa 30'") da usare con un tocco, oppure gli orari da scrivere a mano: inizio, fine, pausa e, se vuoi, l'ora della pausa e una nota. Un turno che finisce dopo mezzanotte (es. 22:00–06:00) va bene. Spuntando *Salva questi orari anche come modello* gli orari diventano un modello per le volte successive. I modelli si gestiscono anche da ingranaggio → *I tuoi modelli di turno*.
+
+**Calendario e Home Assistant.** Anche la seconda persona ha il suo calendario: lo trova nelle sue impostazioni, oppure lo copi tu da *Persone* → *Copia link calendario*. In Home Assistant si aggiunge come un secondo **Remote Calendar** (ad esempio `Turni di Giulia`).
+
+**Sicurezza.** Se un link finisce nelle mani sbagliate, *Nuovo link* lo sostituisce e quello vecchio smette di funzionare. *Rimuovi* cancella la persona con i suoi turni e modelli. I dati stanno in `data/persone.json`.
+
+---
+
 ## Sicurezza
 
 - Username e password stanno solo nel file `.env` sul tuo server e vengono usati solo per fare il login al portale. Non finiscono nei log, né nei file di debug.
