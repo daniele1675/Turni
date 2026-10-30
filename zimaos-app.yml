@@ -10,7 +10,7 @@ services:
     network_mode: bridge
     ports:
       - target: 8090
-        published: "8090"
+        published: "8091"
         protocol: tcp
     volumes:
       - type: bind
@@ -38,6 +38,6 @@ x-casaos:
     en_us: Turni di lavoro da Amazon Moment
   description:
     en_us: App, calendario e Home Assistant per i turni di lavoro.
-  port_map: "8090"
+  port_map: "8091"
   index: /
   scheme: http
