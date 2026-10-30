@@ -101,7 +101,7 @@ def normalize(raw_segments: list[dict]) -> list[dict]:
         dur = _dt(end) - _dt(start)
         all_day = no_time_a or no_time_b or (r.get("allDay") is True and dur >= timedelta(hours=12))
         if all_day or dur >= timedelta(hours=16):
-            kind = "absence" if kind == "absence" else "note"
+            kind = kind if kind in ("absence", "planned", "offer") else "note"
         key = (start, end, kind, r.get("title", ""))
         if key in seen:
             continue
@@ -183,7 +183,7 @@ class Store:
             # Blocchi con orario salvati per errore come "note" dalla versione precedente.
             fixed = []
             for x in segs:
-                if x.get("kind") in ("offer", "absence") and "voluntary time" in str(x.get("title", "")).lower():
+                if x.get("kind") in ("offer", "absence", "note") and "voluntary time" in str(x.get("title", "")).lower():
                     k = classify(x.get("title", ""), "")
                     if k != x.get("kind") or x.get("label") != absence_label(x.get("title", "")):
                         x = dict(x, kind=k, label=absence_label(x["title"]) if k == "absence" else x["title"])
