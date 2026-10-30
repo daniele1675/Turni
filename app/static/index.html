@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Turni</title>
+  <meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16181d" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Turni">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main id="app" aria-live="polite">
+    <header class="top">
+      <div>
+        <p class="eyebrow" id="eyebrow">Turni di lavoro</p>
+        <h1 id="weekTitle">—</h1>
+      </div>
+      <button class="icon-btn" id="settingsBtn" aria-label="Impostazioni">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      </button>
+    </header>
+
+    <section id="banner" hidden></section>
+    <section id="hero" class="hero" hidden></section>
+
+    <nav class="weeknav" aria-label="Settimana">
+      <button class="nav-btn" id="prevWeek" aria-label="Settimana precedente">‹</button>
+      <button class="chip" id="thisWeek">Oggi</button>
+      <span class="week-total" id="weekTotal"></span>
+      <button class="nav-btn" id="nextWeek" aria-label="Settimana successiva">›</button>
+    </nav>
+
+    <ol class="days" id="days"></ol>
+
+    <section id="offers" class="offers" hidden></section>
+
+    <footer class="foot">
+      <span id="updated">—</span>
+      <button class="link-btn" id="refreshBtn">Aggiorna</button>
+    </footer>
+  </main>
+
+  <dialog id="settings">
+    <form method="dialog" class="sheet">
+      <h2>Calendario e accesso</h2>
+      <p class="muted">Aggiungi questo indirizzo come <b>calendario in abbonamento</b> sul telefono o in Home Assistant: i turni si aggiornano da soli.</p>
+      <label class="field">
+        <span>Indirizzo del calendario</span>
+        <input id="icsUrl" readonly>
+      </label>
+      <div class="row">
+        <button type="button" class="btn" id="copyIcs">Copia indirizzo</button>
+        <a class="btn ghost" id="webcalLink" href="#">Apri in Calendario (iPhone)</a>
+      </div>
+      <label class="check"><input type="checkbox" id="icsBreaks"> Includi pause e pranzo come eventi separati</label>
+      <label class="check"><input type="checkbox" id="icsAlarm"> Promemoria 60 minuti prima del turno</label>
+      <p class="muted small" id="statusLine"></p>
+      <div class="row end">
+        <button type="button" class="btn ghost danger" id="logout">Esci da questo dispositivo</button>
+        <button class="btn" autofocus>Chiudi</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="login">
+    <form class="sheet" id="loginForm">
+      <h2>Accesso</h2>
+      <p class="muted">Inserisci il token di accesso. Lo trovi nei log del container o nel file <code>access_token.txt</code> nella cartella dei dati.</p>
+      <label class="field"><span>Token</span><input id="tokenInput" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+      <p class="error small" id="loginError" hidden></p>
+      <div class="row end"><button class="btn">Entra</button></div>
+    </form>
+  </dialog>
+
+  <template id="dayTpl">
+    <li class="day">
+      <button class="day-head" aria-expanded="false">
+        <span class="date"><span class="dow"></span><span class="dnum"></span></span>
+        <span class="main">
+          <span class="time"></span>
+          <span class="bar" aria-hidden="true"></span>
+          <span class="tags"></span>
+        </span>
+        <span class="hours"></span>
+      </button>
+      <ul class="detail" hidden></ul>
+    </li>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

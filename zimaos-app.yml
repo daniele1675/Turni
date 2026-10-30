@@ -1,0 +1,43 @@
+# Da incollare in ZimaOS: App → Installa app personalizzata → YAML.
+# 1) Immagine costruita da github.com/daniele1675/Turni.
+# 2) Dopo l'importazione, compila PORTAL_USERNAME e PORTAL_PASSWORD nella sezione "Variabili".
+name: turni
+services:
+  turni:
+    image: ghcr.io/daniele1675/turni:latest
+    container_name: turni
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - target: 8090
+        published: "8090"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/AppData/turni/data
+        target: /data
+    shm_size: "512mb"
+    environment:
+      PORTAL_USERNAME: ""
+      PORTAL_PASSWORD: ""
+      ACCESS_TOKEN: ""
+      TZ: Europe/Rome
+      REFRESH_HOURS: "4"
+      WEEKS_AHEAD: "3"
+      WEEKS_BACK: "1"
+      NOTIFY_WEBHOOK_URL: ""
+x-casaos:
+  architectures:
+    - amd64
+  main: turni
+  author: self
+  category: Utilities
+  title:
+    en_us: Turni
+  tagline:
+    en_us: Turni di lavoro da Amazon Moment
+  description:
+    en_us: App, calendario e Home Assistant per i turni di lavoro.
+  port_map: "8090"
+  index: /
+  scheme: http

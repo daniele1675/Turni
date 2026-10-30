@@ -1,0 +1,5 @@
+data/
+tests/
+.env
+*.md
+__pycache__/

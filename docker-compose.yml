@@ -1,0 +1,14 @@
+name: turni
+
+services:
+  turni:
+    build: .
+    image: turni:latest
+    container_name: turni
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./data:/data
+    shm_size: "512mb"
