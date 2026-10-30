@@ -1,6 +1,6 @@
 """Feed iCalendar (RFC 5545) dei turni, con orari in UTC per la massima compatibilità."""
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 
@@ -31,7 +31,8 @@ def _hours(minutes: int) -> str:
     return f"{h} h" if not m else f"{h} h {m:02d}"
 
 
-def build_ics(shifts: list[dict], tz_name: str, with_breaks: bool = False, alarm_min: int = 0) -> str:
+def build_ics(shifts: list[dict], tz_name: str, with_breaks: bool = False, alarm_min: int = 0,
+              absences: list[dict] | None = None) -> str:
     tz = ZoneInfo(tz_name)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     lines = [
@@ -81,5 +82,22 @@ def build_ics(shifts: list[dict], tz_name: str, with_breaks: bool = False, alarm
                         "TRANSP:TRANSPARENT",
                         "END:VEVENT",
                     ]
+    for a in absences or []:
+        if any(sh["start"] < a["end"] and sh["end"] > a["start"] for sh in shifts):
+            continue  # già indicata nel titolo del turno
+        s_dt, e_dt = datetime.fromisoformat(a["start"]), datetime.fromisoformat(a["end"])
+        whole_day = (e_dt - s_dt) >= timedelta(hours=16) or (
+            a["start"][11:16] == "00:00" and a["end"][11:16] in ("00:00", "23:59"))
+        lines += ["BEGIN:VEVENT", f'UID:assenza-{a["start"].replace(":", "").replace("-", "")}@turni.local',
+                  f"DTSTAMP:{stamp}"]
+        if whole_day:
+            last = (e_dt - timedelta(minutes=1)).date() if e_dt.time() == datetime.min.time() else e_dt.date()
+            lines += [f'DTSTART;VALUE=DATE:{s_dt:%Y%m%d}',
+                      f'DTEND;VALUE=DATE:{last + timedelta(days=1):%Y%m%d}',
+                      f'SUMMARY:{_esc(a["label"])}']
+        else:
+            lines += [f'DTSTART:{_utc(a["start"], tz)}', f'DTEND:{_utc(a["end"], tz)}',
+                      f'SUMMARY:{_esc(a["label"] + " " + a["start"][11:16] + "–" + a["end"][11:16])}']
+        lines += ["TRANSP:TRANSPARENT", "END:VEVENT"]
     lines.append("END:VCALENDAR")
     return "\r\n".join(_fold(l) for l in lines) + "\r\n"

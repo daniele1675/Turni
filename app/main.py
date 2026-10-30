@@ -204,7 +204,9 @@ async def calendar_ics(request: Request):
         alarm = int(q.get("avviso", "0"))
     except ValueError:
         alarm = 0
-    body = build_ics(store.shifts(), Config.tz, with_breaks=q.get("pause") == "1", alarm_min=alarm)
+    absences = [x for day in store.data["days"].values() for x in day if x["kind"] == "absence"]
+    body = build_ics(store.shifts(), Config.tz, with_breaks=q.get("pause") == "1", alarm_min=alarm,
+                     absences=absences)
     return Response(body, media_type="text/calendar; charset=utf-8",
                     headers={"Content-Disposition": 'inline; filename="turni.ics"', "Cache-Control": "no-cache"})
 

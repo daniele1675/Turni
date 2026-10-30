@@ -17,13 +17,14 @@ LABELS = {
     "offer": "Extra time disponibile",
     "note": "Nota",
     "absence": "Assenza",
+    "planned": "Pianificato",
     "other": "Altro",
 }
 
 # Tipi che non contano come ore lavorate.
 UNPAID = {"lunch"}
 # Tipi che non fanno parte del turno vero e proprio.
-NOT_SHIFT = {"offer", "note", "absence"}
+NOT_SHIFT = {"offer", "note", "absence", "planned"}
 
 ABSENCE_WORDS = ("sick", "malattia", "pto", "paid time off", "vacation", "ferie", "holiday", "festiv",
                  "leave", "permesso", "absence", "assenza", "time off", "day off", "loa", "bereavement")
@@ -32,9 +33,14 @@ ABSENCE_WORDS = ("sick", "malattia", "pto", "paid time off", "vacation", "ferie"
 def classify(title: str, classes: str, background: bool = False) -> str:
     t = (title or "").lower()
     c = (classes or "").lower().split()
-    if background or any(k in t or any(k in x for x in c) for k in ("extra", "vto", "voluntary", "available")):
+    if background:
         return "offer"
-    if any(w in t for w in ABSENCE_WORDS) and "voluntary" not in t:
+    # Voluntary Time-off: quello preso è un permesso; quello "Planned" è solo pianificazione.
+    if "voluntary time" in t or t.strip() == "vto" or "vto" in c:
+        return "planned" if "planned" in t else "absence"
+    if any(k in t or any(k in x for x in c) for k in ("extra", "available")):
+        return "offer"
+    if any(w in t for w in ABSENCE_WORDS):
         return "absence"
     if "lunch" in t or "pranzo" in t or "meal" in t:
         return "lunch"
@@ -49,6 +55,19 @@ def classify(title: str, classes: str, background: bool = False) -> str:
     if "work" in c or t == "work":
         return "work"
     return "other"
+
+
+def absence_label(title: str) -> str:
+    t = (title or "").lower()
+    if "voluntary time" in t or t.strip() == "vto":
+        return "Permesso"
+    if "sick" in t:
+        return "Malattia"
+    if "vacation" in t or "paid time off" in t or t.strip() == "pto":
+        return "Ferie"
+    if "holiday" in t:
+        return "Festività"
+    return title or LABELS["absence"]
 
 
 def _dt(s: str) -> datetime:
@@ -92,7 +111,8 @@ def normalize(raw_segments: list[dict]) -> list[dict]:
             "end": end,
             "kind": kind,
             "title": r.get("title", ""),
-            "label": (r.get("title") or LABELS[kind]) if kind in ("other", "note", "absence") else LABELS[kind],
+            "label": absence_label(r.get("title", "")) if kind == "absence"
+            else (r.get("title") or LABELS[kind]) if kind in ("other", "note", "planned") else LABELS[kind],
         })
     out.sort(key=lambda s: (s["start"], s["end"]))
     return out
@@ -163,6 +183,11 @@ class Store:
             # Blocchi con orario salvati per errore come "note" dalla versione precedente.
             fixed = []
             for x in segs:
+                if x.get("kind") in ("offer", "absence") and "voluntary time" in str(x.get("title", "")).lower():
+                    k = classify(x.get("title", ""), "")
+                    if k != x.get("kind") or x.get("label") != absence_label(x.get("title", "")):
+                        x = dict(x, kind=k, label=absence_label(x["title"]) if k == "absence" else x["title"])
+                        changed = True
                 if x.get("kind") == "note" and "T" in str(x.get("start", "")) and "T" in str(x.get("end", "")):
                     try:
                         short = _dt(x["end"]) - _dt(x["start"]) < timedelta(hours=12)

@@ -122,7 +122,13 @@ function render() {
   let total = 0;
   const problems = [];
   const notesByDate = {};
-  for (const n of d.notes || []) (notesByDate[n.start.slice(0, 10)] = notesByDate[n.start.slice(0, 10)] || []).push(n.label);
+  for (const n of d.notes || []) {
+    // Assenza con orario (es. permesso 07:30–16:00): si mostra anche l'orario.
+    const mins = (parseDT(n.end) - parseDT(n.start)) / 60000;
+    const timed = mins < 16 * 60 && !(hhmm(n.start) === "00:00" && (hhmm(n.end) === "23:59" || hhmm(n.end) === "00:00"));
+    const text = timed ? `${n.label} ${hhmm(n.start)} – ${hhmm(n.end)}` : n.label;
+    (notesByDate[n.start.slice(0, 10)] = notesByDate[n.start.slice(0, 10)] || []).push(text);
+  }
   for (let i = 0; i < 7; i++) {
     const day = addDays(monday, i);
     const key = iso(day);
