@@ -143,16 +143,21 @@ def status_payload():
 async def api_data(request: Request):
     if not authorized(request):
         return deny()
-    offers = [s for day in store.data["days"].values() for s in day if s["kind"] == "offer"]
-    return JSONResponse({
-        "today": date.today().isoformat(),
-        "now": datetime.now().isoformat(timespec="minutes"),
-        "shifts": store.shifts(),
-        "known_dates": store.known_dates(),
-        "offers": offers,
-        "changes": store.data.get("changes", [])[:10],
-        "status": status_payload(),
-    })
+    try:
+        offers = [s for day in store.data["days"].values() for s in day if s["kind"] == "offer"]
+        return JSONResponse({
+            "today": date.today().isoformat(),
+            "now": datetime.now().isoformat(timespec="minutes"),
+            "shifts": store.shifts(),
+            "known_dates": store.known_dates(),
+            "offers": offers,
+            "changes": store.data.get("changes", [])[:10],
+            "status": status_payload(),
+        })
+    except Exception as e:
+        log(f"Errore in /api/data: {e}\n{traceback.format_exc()}")
+        return JSONResponse({"error": f"{type(e).__name__}: {e}"}, status_code=500,
+                            headers={"X-Errore": type(e).__name__})
 
 
 async def api_next(request: Request):

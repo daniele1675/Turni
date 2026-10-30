@@ -59,15 +59,25 @@ async function api(path, opts = {}) {
 
 async function load() {
   if (!state.token) return showLogin();
+  let res;
   try {
-    const res = await api("/api/data");
+    res = await api("/api/data");
+  } catch (e) {
+    if (e.message !== "401") $("updated").textContent = "Server non raggiungibile";
+    return;
+  }
+  try {
+    if (!res.ok) {
+      let msg = `il server ha risposto ${res.status}`;
+      try { const j = await res.json(); if (j.error) msg += ` (${j.error})`; } catch (_) { /* risposta non JSON */ }
+      throw new Error(msg);
+    }
     state.data = await res.json();
     render();
     if (state.data.status.running) pollUntilDone();
   } catch (e) {
-    if (e.message !== "401") {
-      $("updated").textContent = "Server non raggiungibile";
-    }
+    console.error(e);
+    $("updated").textContent = `Errore: ${e.message}`;
   }
 }
 
