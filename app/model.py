@@ -79,7 +79,9 @@ def normalize(raw_segments: list[dict]) -> list[dict]:
             continue
         kind = classify(r.get("title", ""), r.get("classes", ""), r.get("background", False))
         # Eventi di giornata intera (ferie, festività, avvisi) o lunghissimi: note o assenze, non turni.
-        if r.get("allDay") or no_time_a or no_time_b or (_dt(end) - _dt(start)) >= timedelta(hours=16):
+        dur = _dt(end) - _dt(start)
+        all_day = no_time_a or no_time_b or (r.get("allDay") is True and dur >= timedelta(hours=12))
+        if all_day or dur >= timedelta(hours=16):
             kind = "absence" if kind == "absence" else "note"
         key = (start, end, kind, r.get("title", ""))
         if key in seen:
@@ -158,6 +160,20 @@ class Store:
         """Corregge i dati salvati dalle versioni precedenti (date senza ora)."""
         changed = False
         for d, segs in list(self.data.get("days", {}).items()):
+            # Blocchi con orario salvati per errore come "note" dalla versione precedente.
+            fixed = []
+            for x in segs:
+                if x.get("kind") == "note" and "T" in str(x.get("start", "")) and "T" in str(x.get("end", "")):
+                    try:
+                        short = _dt(x["end"]) - _dt(x["start"]) < timedelta(hours=12)
+                    except (ValueError, TypeError, KeyError):
+                        short = False
+                    if short:
+                        k = classify(x.get("title", ""), "")
+                        x = dict(x, kind=k, label=(x.get("title") or LABELS[k]) if k in ("other", "note", "absence") else LABELS[k])
+                        changed = True
+                fixed.append(x)
+            self.data["days"][d] = segs = fixed
             if any("T" not in str(x.get("start", "")) or "T" not in str(x.get("end", "")) for x in segs):
                 raw = [{"start": x.get("start"), "end": x.get("end"), "title": x.get("title", ""),
                         "classes": x.get("kind", ""), "allDay": "T" not in str(x.get("start", ""))} for x in segs]
