@@ -116,10 +116,14 @@ function render() {
   const list = $("days");
   list.textContent = "";
   let total = 0;
+  const problems = [];
+  const notesByDate = {};
+  for (const n of d.notes || []) (notesByDate[n.start.slice(0, 10)] = notesByDate[n.start.slice(0, 10)] || []).push(n.label);
   for (let i = 0; i < 7; i++) {
     const day = addDays(monday, i);
     const key = iso(day);
     const node = $("dayTpl").content.firstElementChild.cloneNode(true);
+    try {
     node.querySelector(".dow").textContent = GIORNI[day.getDay()];
     node.querySelector(".dnum").textContent = day.getDate();
     if (key === d.today) node.classList.add("today");
@@ -158,6 +162,11 @@ function render() {
         detail.hidden = !open;
         head.setAttribute("aria-expanded", String(open));
       });
+    } else if ((notesByDate[key] || []).length) {
+      node.classList.add("off");
+      node.querySelector(".time").textContent = notesByDate[key].join(" · ");
+      head.disabled = true;
+      delete notesByDate[key];
     } else if (known.has(key)) {
       node.classList.add("off");
       node.querySelector(".time").textContent = "Riposo";
@@ -171,8 +180,19 @@ function render() {
       node.querySelector(".time").textContent = "Non ancora pubblicato";
       head.disabled = true;
     }
+    for (const label of notesByDate[key] || []) {
+      const sp = document.createElement("span"); sp.className = "tag"; sp.textContent = label;
+      node.querySelector(".tags").appendChild(sp);
+    }
+    } catch (err) {
+      console.error("Giorno", key, err, byDate[key]);
+      problems.push(`${key}: ${err.message}`);
+      node.classList.add("unknown");
+      node.querySelector(".time").textContent = "Non riesco a mostrare questo giorno";
+    }
     list.appendChild(node);
   }
+  state.problems = problems;
   $("weekTotal").textContent = total ? `Totale ${fmtHours(total)}` : "";
 
   renderHero(d);
@@ -265,6 +285,9 @@ function renderStatus(s) {
     $("updated").textContent = "Ancora nessun dato letto";
   }
   const metodo = { fullcalendar: "dati del calendario", grid: "posizione dei blocchi" }[s.method] || s.method;
+  if (state.problems && state.problems.length) {
+    $("updated").textContent = `Errore nella vista: ${state.problems[0]}`;
+  }
   $("statusLine").textContent = s.updated_at
     ? `Ultima lettura dal portale: ${s.updated_at.replace("T", " ")}${metodo ? ` · lettura da ${metodo}` : ""}` : "";
 }

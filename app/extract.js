@@ -19,9 +19,11 @@
       const evs = $("#calendar").fullCalendar("clientEvents") || [];
       const segs = [];
       for (const e of evs) {
-        if (!e.start) continue;
+        if (!e.start || typeof e.start.format !== "function") continue;
+        const allDay = !!e.allDay || (e.start.hasTime && !e.start.hasTime());
         const start = e.start.format("YYYY-MM-DDTHH:mm");
-        const end = (e.end || e.start).format("YYYY-MM-DDTHH:mm");
+        let end = e.end && typeof e.end.format === "function" ? e.end.format("YYYY-MM-DDTHH:mm") : start;
+        if (allDay && end <= start) end = start.slice(0, 10) + "T23:59";
         if (start.slice(0, 10) > last || end.slice(0, 10) < first) continue;
         const cls = [].concat(e.className || []).join(" ");
         segs.push({
@@ -29,6 +31,7 @@
           title: String(e.title || "").trim(),
           classes: cls,
           background: e.rendering === "background" || e.rendering === "inverse-background",
+          allDay,
         });
       }
       if (segs.length || evs.length === 0) {

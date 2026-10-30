@@ -151,6 +151,7 @@ async def api_data(request: Request):
             "shifts": store.shifts(),
             "known_dates": store.known_dates(),
             "offers": offers,
+            "notes": [s for day in store.data["days"].values() for s in day if s["kind"] in ("note", "absence")],
             "changes": store.data.get("changes", [])[:10],
             "status": status_payload(),
         })

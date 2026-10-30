@@ -15,13 +15,18 @@ LABELS = {
     "meeting": "Riunione",
     "npt": "Attività (NPT)",
     "offer": "Extra time disponibile",
+    "note": "Nota",
+    "absence": "Assenza",
     "other": "Altro",
 }
 
 # Tipi che non contano come ore lavorate.
 UNPAID = {"lunch"}
 # Tipi che non fanno parte del turno vero e proprio.
-NOT_SHIFT = {"offer"}
+NOT_SHIFT = {"offer", "note", "absence"}
+
+ABSENCE_WORDS = ("sick", "malattia", "pto", "paid time off", "vacation", "ferie", "holiday", "festiv",
+                 "leave", "permesso", "absence", "assenza", "time off", "day off", "loa", "bereavement")
 
 
 def classify(title: str, classes: str, background: bool = False) -> str:
@@ -29,6 +34,8 @@ def classify(title: str, classes: str, background: bool = False) -> str:
     c = (classes or "").lower().split()
     if background or any(k in t or any(k in x for x in c) for k in ("extra", "vto", "voluntary", "available")):
         return "offer"
+    if any(w in t for w in ABSENCE_WORDS) and "voluntary" not in t:
+        return "absence"
     if "lunch" in t or "pranzo" in t or "meal" in t:
         return "lunch"
     if "break" in c or "break" in t or "pausa" in t:
@@ -56,6 +63,9 @@ def normalize(raw_segments: list[dict]) -> list[dict]:
         if end <= start:
             continue
         kind = classify(r.get("title", ""), r.get("classes", ""), r.get("background", False))
+        # Eventi di giornata intera (ferie, festività, avvisi) o lunghissimi: note, non turni.
+        if r.get("allDay") or (_dt(end) - _dt(start)) >= timedelta(hours=16):
+            kind = "note"
         key = (start, end, kind, r.get("title", ""))
         if key in seen:
             continue
@@ -65,7 +75,7 @@ def normalize(raw_segments: list[dict]) -> list[dict]:
             "end": end,
             "kind": kind,
             "title": r.get("title", ""),
-            "label": LABELS[kind] if kind != "other" else (r.get("title") or LABELS["other"]),
+            "label": (r.get("title") or LABELS[kind]) if kind in ("other", "note", "absence") else LABELS[kind],
         })
     out.sort(key=lambda s: (s["start"], s["end"]))
     return out
