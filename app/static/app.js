@@ -201,6 +201,7 @@ function renderPerson(d, monday, sunday) {
     try {
       node.querySelector(".dow").textContent = GIORNI[day.getDay()];
       node.querySelector(".dnum").textContent = day.getDate();
+      node.querySelector(".mon").textContent = MESI_BREVI[day.getMonth()];
       if (key === d.today) node.classList.add("today");
       const shifts = byDate[key] || [];
       const head = node.querySelector(".day-head");
@@ -302,7 +303,8 @@ function renderTogether(monday) {
     if (key === today) li.classList.add("today");
     const row = el("div", "day-head");
     const dt = el("span", "date");
-    dt.append(el("span", "dow", GIORNI[day.getDay()]), el("span", "dnum", String(day.getDate())));
+    dt.append(el("span", "dow", GIORNI[day.getDay()]), el("span", "dnum", String(day.getDate())),
+      el("span", "mon", MESI_BREVI[day.getMonth()]));
     const main = el("span", "main");
     const states = persons.map((d) => ({ d, ...personDay(d, key) }));
     states.forEach((s, idx) => {

@@ -108,7 +108,8 @@ h1 { margin: 2px 0 0; font-size: 28px; line-height: 1.15; letter-spacing: -.02em
 .date { display: flex; flex-direction: column; align-items: center; }
 .dow { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
 .dnum { font-size: 22px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.today .dow, .today .dnum { color: var(--accent); }
+.mon { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; line-height: 1.2; }
+.today .dow, .today .dnum, .today .mon { color: var(--accent); }
 .main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .time { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
 .off .time, .unknown .time { font-weight: 500; color: var(--muted); font-size: 16px; }
