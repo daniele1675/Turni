@@ -20,9 +20,13 @@
       const segs = [];
       for (const e of evs) {
         if (!e.start || typeof e.start.format !== "function") continue;
-        const allDay = !!e.allDay || (e.start.hasTime && !e.start.hasTime());
-        const start = e.start.format("YYYY-MM-DDTHH:mm");
-        let end = e.end && typeof e.end.format === "function" ? e.end.format("YYYY-MM-DDTHH:mm") : start;
+        // FullCalendar, per gli eventi senza orario (giornata intera), toglie l'ora da format():
+        // per questo data e ora si leggono separatamente.
+        const timed = (m) => !(m.hasTime && !m.hasTime());
+        const fmt = (m) => m.format("YYYY-MM-DD") + "T" + (timed(m) ? m.format("HH:mm") : "00:00");
+        const allDay = !!e.allDay || !timed(e.start);
+        const start = fmt(e.start);
+        let end = e.end && typeof e.end.format === "function" ? fmt(e.end) : start;
         if (allDay && end <= start) end = start.slice(0, 10) + "T23:59";
         if (start.slice(0, 10) > last || end.slice(0, 10) < first) continue;
         const cls = [].concat(e.className || []).join(" ");

@@ -55,17 +55,32 @@ def _dt(s: str) -> datetime:
     return datetime.fromisoformat(s)
 
 
+def fix_dt(value) -> tuple[str, bool]:
+    """Restituisce 'AAAA-MM-GGTHH:MM' e se l'ora mancava (evento di giornata intera)."""
+    s = str(value or "").strip().replace(" ", "T")
+    if len(s) == 10:
+        return s + "T00:00", True
+    return s[:16], False
+
+
 def normalize(raw_segments: list[dict]) -> list[dict]:
     out = []
     seen = set()
     for r in raw_segments:
-        start, end = r["start"][:16], r["end"][:16]
+        try:
+            start, no_time_a = fix_dt(r.get("start"))
+            end, no_time_b = fix_dt(r.get("end") or r.get("start"))
+            if no_time_a and end <= start:
+                end = start[:10] + "T23:59"
+            _dt(start), _dt(end)
+        except (ValueError, TypeError):
+            continue  # data illeggibile: si salta il blocco
         if end <= start:
             continue
         kind = classify(r.get("title", ""), r.get("classes", ""), r.get("background", False))
-        # Eventi di giornata intera (ferie, festività, avvisi) o lunghissimi: note, non turni.
-        if r.get("allDay") or (_dt(end) - _dt(start)) >= timedelta(hours=16):
-            kind = "note"
+        # Eventi di giornata intera (ferie, festività, avvisi) o lunghissimi: note o assenze, non turni.
+        if r.get("allDay") or no_time_a or no_time_b or (_dt(end) - _dt(start)) >= timedelta(hours=16):
+            kind = "absence" if kind == "absence" else "note"
         key = (start, end, kind, r.get("title", ""))
         if key in seen:
             continue
@@ -83,6 +98,7 @@ def normalize(raw_segments: list[dict]) -> list[dict]:
 
 def build_shifts(segments: list[dict], max_gap_min: int = 30) -> list[dict]:
     """Raggruppa i segmenti consecutivi in turni (gestisce anche i turni a cavallo della mezzanotte)."""
+    absences = [s for s in segments if s["kind"] == "absence"]
     segs = [s for s in segments if s["kind"] not in NOT_SHIFT]
     segs.sort(key=lambda s: s["start"])
     groups: list[list[dict]] = []
@@ -102,12 +118,16 @@ def build_shifts(segments: list[dict], max_gap_min: int = 30) -> list[dict]:
         unpaid = sum(int((_dt(x["end"]) - _dt(x["start"])).total_seconds() // 60)
                      for x in g if x["kind"] in UNPAID)
         extras = sorted({x["label"] for x in g if x["kind"] not in ("work", "break", "lunch")})
+        # Assenza (malattia, ferie...) che copre il turno: il turno resta visibile ma non si lavora.
+        absence = next((a["label"] for a in absences
+                        if _dt(a["start"]) < end and _dt(a["end"]) > start), None)
         shifts.append({
             "date": start.date().isoformat(),
             "start": start.isoformat(timespec="minutes"),
             "end": end.isoformat(timespec="minutes"),
             "minutes_total": total,
-            "minutes_worked": total - unpaid,
+            "minutes_worked": 0 if absence else total - unpaid,
+            "absence": absence,
             "highlights": extras,
             "segments": g,
         })
@@ -115,7 +135,7 @@ def build_shifts(segments: list[dict], max_gap_min: int = 30) -> list[dict]:
 
 
 def shift_signature(sh: dict) -> str:
-    return f'{sh["start"]}|{sh["end"]}|' + ",".join(f'{s["kind"]}@{s["start"]}' for s in sh["segments"])
+    return f'{sh["start"]}|{sh["end"]}|{sh.get("absence") or ""}|' + ",".join(f'{s["kind"]}@{s["start"]}' for s in sh["segments"])
 
 
 class Store:
@@ -130,6 +150,22 @@ class Store:
             try:
                 with open(path, encoding="utf-8") as f:
                     self.data.update(json.load(f))
+            except Exception:
+                pass
+        self._repair()
+
+    def _repair(self):
+        """Corregge i dati salvati dalle versioni precedenti (date senza ora)."""
+        changed = False
+        for d, segs in list(self.data.get("days", {}).items()):
+            if any("T" not in str(x.get("start", "")) or "T" not in str(x.get("end", "")) for x in segs):
+                raw = [{"start": x.get("start"), "end": x.get("end"), "title": x.get("title", ""),
+                        "classes": x.get("kind", ""), "allDay": "T" not in str(x.get("start", ""))} for x in segs]
+                self.data["days"][d] = normalize(raw)
+                changed = True
+        if changed:
+            try:
+                self.save()
             except Exception:
                 pass
 

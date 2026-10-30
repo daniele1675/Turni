@@ -28,8 +28,8 @@ function saveToken(t) {
 const pad = (n) => String(n).padStart(2, "0");
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseDay = (s) => { const [y, m, d] = s.slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d, 12); };
-const parseDT = (s) => { const [d, t] = s.split("T"); const [y, m, dd] = d.split("-").map(Number); const [h, mi] = t.split(":").map(Number); return new Date(y, m - 1, dd, h, mi); };
-const hhmm = (s) => s.slice(11, 16);
+const parseDT = (s) => { const [d = "", t = "00:00"] = String(s || "").split("T"); const [y, m, dd] = d.split("-").map(Number); const [h, mi] = t.split(":").map(Number); return new Date(y, m - 1, dd, h || 0, mi || 0); };
+const hhmm = (s) => String(s || "").slice(11, 16) || "--:--";
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const minutesOfDay = (s, day) => Math.round((parseDT(s) - parseDay(day).setHours(0, 0, 0, 0)) / 60000);
 function mondayOf(d) { const x = new Date(d); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); x.setHours(12, 0, 0, 0); return x; }
@@ -109,7 +109,11 @@ function render() {
   const weekShifts = [];
   for (let i = 0; i < 7; i++) weekShifts.push(...(byDate[iso(addDays(monday, i))] || []));
   let lo = 24 * 60, hi = 0;
-  for (const s of weekShifts) { lo = Math.min(lo, minutesOfDay(s.start, s.date)); hi = Math.max(hi, minutesOfDay(s.end, s.date)); }
+  for (const s of weekShifts) {
+    const a = minutesOfDay(s.start, s.date), b = minutesOfDay(s.end, s.date);
+    if (isFinite(a) && isFinite(b)) { lo = Math.min(lo, a); hi = Math.max(hi, b); }
+  }
+  if (lo > hi) { lo = 0; hi = 24 * 60; }
   lo = Math.floor(lo / 60) * 60; hi = Math.ceil(hi / 60) * 60;
   const span = Math.max(hi - lo, 60);
 
@@ -135,7 +139,7 @@ function render() {
       node.querySelector(".time").textContent = shifts.map((s) => `${hhmm(s.start)} – ${hhmm(s.end)}`).join(" · ");
       const worked = shifts.reduce((a, s) => a + s.minutes_worked, 0);
       total += worked;
-      node.querySelector(".hours").textContent = fmtHours(worked);
+      node.querySelector(".hours").textContent = worked ? fmtHours(worked) : "";
       const bar = node.querySelector(".bar");
       const detail = node.querySelector(".detail");
       for (const s of shifts) {
@@ -154,6 +158,14 @@ function render() {
         }
       }
       const tags = node.querySelector(".tags");
+      const absent = shifts.filter((s) => s.absence);
+      if (absent.length === shifts.length) {
+        node.classList.add("absent");
+        delete notesByDate[key]; // l'assenza è già indicata qui
+      }
+      for (const a of new Set(absent.map((s) => s.absence))) {
+        const sp = document.createElement("span"); sp.className = "tag changed"; sp.textContent = a; tags.appendChild(sp);
+      }
       const labels = [...new Set(shifts.flatMap((s) => s.highlights))];
       for (const t of labels) { const sp = document.createElement("span"); sp.className = "tag"; sp.textContent = t; tags.appendChild(sp); }
       if (recentChange.has(key)) { const sp = document.createElement("span"); sp.className = "tag changed"; sp.textContent = "Modificato"; tags.appendChild(sp); }
@@ -204,7 +216,7 @@ function render() {
 function renderHero(d) {
   const hero = $("hero");
   const now = new Date();
-  const next = d.shifts.find((s) => parseDT(s.end) > now);
+  const next = d.shifts.find((s) => parseDT(s.end) > now && !s.absence);
   if (!next) { hero.hidden = true; return; }
   const start = parseDT(next.start), end = parseDT(next.end);
   hero.hidden = false;

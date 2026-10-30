@@ -50,6 +50,8 @@ def build_ics(shifts: list[dict], tz_name: str, with_breaks: bool = False, alarm
         title = "Turno " + sh["start"][11:16] + "–" + sh["end"][11:16]
         if sh["highlights"]:
             title += " · " + ", ".join(sh["highlights"])
+        if sh.get("absence"):
+            title = f'{sh["absence"]} (turno {sh["start"][11:16]}–{sh["end"][11:16]})'
         desc = f'Ore di lavoro: {_hours(sh["minutes_worked"])} (pranzo escluso)\n\n{detail}'
         lines += [
             "BEGIN:VEVENT",

@@ -166,7 +166,7 @@ async def api_next(request: Request):
     if not authorized(request):
         return deny()
     now = datetime.now().isoformat(timespec="minutes")
-    nxt = next((s for s in store.shifts() if s["end"] > now), None)
+    nxt = next((s for s in store.shifts() if s["end"] > now and not s.get("absence")), None)
     if not nxt:
         return JSONResponse({"state": None})
     return JSONResponse({
