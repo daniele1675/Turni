@@ -188,6 +188,7 @@ function renderPerson(d, monday, sunday) {
     (d.changes || []).filter((c) => (Date.now() - new Date(c.detected_at)) < 7 * 86400000).map((c) => c.date));
   const { lo, span } = weekScale(byDate, monday);
   const notesByDate = notesMap(d);
+  const offersByDate = offerRanges(d);
 
   const list = $("days");
   list.textContent = "";
@@ -259,6 +260,7 @@ function renderPerson(d, monday, sunday) {
         head.disabled = true;
       }
       for (const label of notesByDate[key] || []) tags.appendChild(el("span", "tag", label));
+      if (offersByDate[key]) tags.appendChild(el("span", "tag offer", `Straordinario ${rangesText(offersByDate[key])}`));
       if (editable) head.addEventListener("click", () => openEditor(key, shifts[0] || null));
     } catch (err) {
       console.error("Giorno", key, err, byDate[key]);
@@ -400,15 +402,31 @@ function renderBanner(d) {
   }
 }
 
+/* Straordinario disponibile: i blocchi da mezz'ora vicini diventano un'unica fascia per giorno */
+function offerRanges(d) {
+  const byDay = {};
+  const items = [...(d.offers || [])].sort((a, b) => (a.start < b.start ? -1 : 1));
+  for (const o of items) {
+    const day = o.start.slice(0, 10);
+    const list = (byDay[day] = byDay[day] || []);
+    const last = list[list.length - 1];
+    if (last && o.start <= last.end) { if (o.end > last.end) last.end = o.end; }
+    else list.push({ start: o.start, end: o.end });
+  }
+  return byDay;
+}
+const rangesText = (list) => list.map((r) => `${hhmm(r.start)}–${hhmm(r.end)}`).join(" · ");
+
 function renderOffers(d, monday, sunday) {
   const box = $("offers");
-  const from = iso(monday), to = iso(sunday);
-  const offers = (d.offers || []).filter((o) => o.start.slice(0, 10) >= from && o.start.slice(0, 10) <= to);
-  if (!offers.length) { box.hidden = true; return; }
+  const byDay = offerRanges(d);
+  const days = [];
+  for (let i = 0; i < 7; i++) { const k = iso(addDays(monday, i)); if (byDay[k]) days.push(k); }
+  if (!days.length) { box.hidden = true; return; }
   box.hidden = false;
-  box.innerHTML = "<h2>Extra time disponibile</h2><ul></ul><p class='muted small'>Da accettare sul portale.</p>";
+  box.innerHTML = "<h2>Straordinario disponibile</h2><ul></ul><p class='muted small'>Da richiedere sul portale: non è conteggiato nei turni.</p>";
   const ul = box.querySelector("ul");
-  for (const o of offers) ul.appendChild(el("li", "", `${shortDate(parseDay(o.start))}: ${hhmm(o.start)} – ${hhmm(o.end)}`));
+  for (const k of days) ul.appendChild(el("li", "", `${cap(shortDate(parseDay(k)))}: ${rangesText(byDay[k])}`));
 }
 
 function renderFooter(d) {

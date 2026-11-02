@@ -14,7 +14,7 @@ LABELS = {
     "training": "Formazione",
     "meeting": "Riunione",
     "npt": "Attività (NPT)",
-    "offer": "Extra time disponibile",
+    "offer": "Straordinario disponibile",
     "note": "Nota",
     "absence": "Assenza",
     "planned": "Pianificato",
@@ -30,6 +30,14 @@ ABSENCE_WORDS = ("sick", "malattia", "pto", "paid time off", "vacation", "ferie"
                  "leave", "permesso", "absence", "assenza", "time off", "day off", "loa", "bereavement")
 
 
+def is_overtime(t: str, c: list[str]) -> bool:
+    """Straordinario da richiedere (Extra Time / "ET Apply"): non è un turno."""
+    words = t.replace("-", " ").replace("_", " ").split()
+    if words[:1] == ["et"] or "et" in words and ("apply" in words or "available" in words):
+        return True
+    return any(k in t or any(k in x for x in c) for k in ("extra", "extratime", "available", "overtime"))
+
+
 def classify(title: str, classes: str, background: bool = False) -> str:
     t = (title or "").lower()
     c = (classes or "").lower().split()
@@ -38,7 +46,7 @@ def classify(title: str, classes: str, background: bool = False) -> str:
     # Voluntary Time-off: quello preso è un permesso; quello "Planned" è solo pianificazione.
     if "voluntary time" in t or t.strip() == "vto" or "vto" in c:
         return "planned" if "planned" in t else "absence"
-    if any(k in t or any(k in x for x in c) for k in ("extra", "available")):
+    if is_overtime(t, c):
         return "offer"
     if any(w in t for w in ABSENCE_WORDS):
         return "absence"
@@ -179,10 +187,15 @@ class Store:
     def _repair(self):
         """Corregge i dati salvati dalle versioni precedenti (date senza ora)."""
         changed = False
+        repaired_dates = set()
         for d, segs in list(self.data.get("days", {}).items()):
             # Blocchi con orario salvati per errore come "note" dalla versione precedente.
             fixed = []
             for x in segs:
+                if x.get("kind") not in ("offer",) and is_overtime(str(x.get("title", "")).lower(), []):
+                    x = dict(x, kind="offer", label=LABELS["offer"])
+                    changed = True
+                    repaired_dates.add(d)
                 if x.get("kind") in ("offer", "absence", "note") and "voluntary time" in str(x.get("title", "")).lower():
                     k = classify(x.get("title", ""), "")
                     if k != x.get("kind") or x.get("label") != absence_label(x.get("title", "")):
@@ -204,6 +217,9 @@ class Store:
                         "classes": x.get("kind", ""), "allDay": "T" not in str(x.get("start", ""))} for x in segs]
                 self.data["days"][d] = normalize(raw)
                 changed = True
+        if repaired_dates:
+            # Le "modifiche" segnalate per quei giorni erano dovute allo straordinario letto come turno.
+            self.data["changes"] = [c for c in self.data.get("changes", []) if c.get("date") not in repaired_dates]
         if changed:
             try:
                 self.save()

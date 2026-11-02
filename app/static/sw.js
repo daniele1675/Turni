@@ -1,5 +1,5 @@
 // Service worker: l'app si apre anche senza rete, mostrando gli ultimi turni scaricati.
-const CACHE = "turni-v6";
+const CACHE = "turni-v7";
 const SHELL = ["/", "/static/app.js", "/static/style.css", "/manifest.webmanifest",
   "/static/icon-192.png", "/static/icon-512.png", "/static/apple-touch-icon.png"];
 

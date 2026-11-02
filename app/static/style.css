@@ -227,3 +227,6 @@ code { font-size: 13px; }
 .tpl span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .tpl.current { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .tpl:hover { border-color: var(--accent); }
+
+/* Straordinario disponibile (da richiedere) */
+.tag.offer { background: transparent; border: 1px dashed color-mix(in srgb, var(--npt) 55%, transparent); color: var(--npt); }
