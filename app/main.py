@@ -16,7 +16,6 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.routing import Mount, Route
-from starlette.staticfiles import StaticFiles
 
 from .config import Config
 from .ics import build_ics
@@ -415,13 +414,37 @@ async def api_template(request: Request):
     return JSONResponse({"ok": True})
 
 
+def _asset_version() -> str:
+    """Impronta dei file dell'app: cambia a ogni aggiornamento, così telefono e Cloudflare non usano copie vecchie."""
+    import hashlib
+    h = hashlib.sha1()
+    for name in ("app.js", "style.css"):
+        h.update((STATIC / name).read_bytes())
+    return h.hexdigest()[:10]
+
+
+ASSET_VERSION = _asset_version()
+NO_CACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "CDN-Cache-Control": "no-store"}
+
+
 async def index(request: Request):
-    return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    html = html.replace("/static/app.js", f"/static/app.js?v={ASSET_VERSION}")
+    html = html.replace("/static/style.css", f"/static/style.css?v={ASSET_VERSION}")
+    return Response(html, media_type="text/html; charset=utf-8", headers=NO_CACHE)
+
+
+async def static_file(request: Request):
+    name = request.path_params["name"]
+    path = (STATIC / name).resolve()
+    if path.parent != STATIC.resolve() or not path.is_file():
+        return Response("non trovato", status_code=404)
+    return FileResponse(path, headers=NO_CACHE)
 
 
 async def sw(request: Request):
     return FileResponse(STATIC / "sw.js", media_type="application/javascript",
-                        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
+                        headers={**NO_CACHE, "Service-Worker-Allowed": "/"})
 
 
 async def manifest(request: Request):
@@ -466,7 +489,7 @@ app = Starlette(
         Route("/api/manual/templates/{tid}", api_template, methods=["DELETE"]),
         Route("/calendar.ics", calendar_ics),
         Route("/turni.ics", calendar_ics),
-        Mount("/static", StaticFiles(directory=STATIC), name="static"),
+        Route("/static/{name}", static_file),
     ],
     lifespan=lifespan,
 )

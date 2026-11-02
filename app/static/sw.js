@@ -1,5 +1,5 @@
 // Service worker: l'app si apre anche senza rete, mostrando gli ultimi turni scaricati.
-const CACHE = "turni-v8";
+const CACHE = "turni-v9";
 const SHELL = ["/", "/static/app.js", "/static/style.css", "/manifest.webmanifest",
   "/static/icon-192.png", "/static/icon-512.png", "/static/apple-touch-icon.png"];
 
@@ -18,7 +18,7 @@ self.addEventListener("fetch", (e) => {
   if (url.pathname === "/api/data" || SHELL.includes(url.pathname)) {
     // Prima la rete, poi la copia salvata.
     e.respondWith(
-      fetch(e.request).then((res) => {
+      fetch(e.request, { cache: "no-store" }).then((res) => {
         if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(url.pathname + url.search, copy)); }
         return res;
       }).catch(() => caches.match(url.pathname + url.search))
