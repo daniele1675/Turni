@@ -410,7 +410,8 @@ function offerRanges(d) {
     const day = o.start.slice(0, 10);
     const list = (byDay[day] = byDay[day] || []);
     const last = list[list.length - 1];
-    if (last && o.start <= last.end) { if (o.end > last.end) last.end = o.end; }
+    // Consecutive (anche con pochi minuti di distacco): una sola fascia
+    if (last && (parseDT(o.start) - parseDT(last.end)) <= 5 * 60000) { if (o.end > last.end) last.end = o.end; }
     else list.push({ start: o.start, end: o.end });
   }
   return byDay;
