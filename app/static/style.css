@@ -230,3 +230,9 @@ code { font-size: 13px; }
 
 /* Straordinario disponibile (da richiedere) */
 .tag.offer { background: transparent; border: 1px dashed color-mix(in srgb, var(--npt) 55%, transparent); color: var(--npt); }
+
+/* Ore del mese */
+.month-total { margin: -2px 0 12px; padding: 10px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.month-total b { font-size: 16px; }
+.month-total .sep { color: var(--muted); }

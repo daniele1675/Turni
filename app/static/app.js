@@ -272,6 +272,7 @@ function renderPerson(d, monday, sunday) {
   }
   state.problems = problems;
   $("weekTotal").textContent = total ? `Totale ${fmtHours(total)}` : "";
+  renderMonthTotal(d, monday, sunday);
 
   renderHero(d);
   renderBanner(d);
@@ -325,6 +326,7 @@ function renderTogether(monday) {
     list.appendChild(li);
   }
   $("weekTotal").textContent = "";
+  $("monthTotal").hidden = true;
   $("banner").hidden = true;
   $("offers").hidden = true;
 
@@ -346,6 +348,30 @@ function renderTogether(monday) {
   }
   $("refreshBtn").hidden = true;
   $("updated").textContent = "Vista di tutte le persone";
+}
+
+/* Ore lavorate nel mese (per chi inserisce i turni a mano): mese della settimana mostrata,
+   o entrambi i mesi se la settimana è a cavallo */
+function renderMonthTotal(d, monday, sunday) {
+  const box = $("monthTotal");
+  if (d.person.source !== "manuale") { box.hidden = true; return; }
+  const months = [...new Set([iso(monday).slice(0, 7), iso(sunday).slice(0, 7)])];
+  const parts = months.map((ym) => {
+    const mins = d.shifts.filter((s) => s.date.slice(0, 7) === ym && !s.absence)
+      .reduce((a, s) => a + s.minutes_worked, 0);
+    const [y, m] = ym.split("-").map(Number);
+    const days = new Set(d.shifts.filter((s) => s.date.slice(0, 7) === ym && !s.absence).map((s) => s.date)).size;
+    return { label: cap(MESI[m - 1]) + (y !== new Date().getFullYear() ? ` ${y}` : ""), mins, days };
+  });
+  box.hidden = false;
+  box.textContent = "";
+  parts.forEach((p, idx) => {
+    if (idx) box.appendChild(el("span", "sep", "·"));
+    const item = el("span", "mt");
+    item.append(el("span", "muted", `${p.label}: `), el("b", "", p.mins ? fmtHours(p.mins) : "0 h"),
+      el("span", "muted", p.days ? ` in ${p.days} ${p.days === 1 ? "giorno" : "giorni"}` : ""));
+    box.appendChild(item);
+  });
 }
 
 function renderHero(d) {
